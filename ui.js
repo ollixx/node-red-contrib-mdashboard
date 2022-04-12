@@ -255,7 +255,7 @@ function add(opt) {
             if (msg.hasOwnProperty("enabled")) { toEmit.disabled = !msg.enabled; }
             if (msg.hasOwnProperty("className")) { toEmit.className = msg.className; }
             toEmit.id = toStore.id = opt.node.id;
-            //toEmit.socketid = msg.socketid; // dcj mu
+            toEmit.socketid = msg.socketid; // dcj mu
             // Emit and Store the data
             //if (settings.verbose) { console.log("UI-EMIT",JSON.stringify(toEmit)); }
             emitSocket(updateValueEventName, toEmit);
