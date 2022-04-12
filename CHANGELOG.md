@@ -1,8 +1,354 @@
-### 2.19.4-beta: Maintenance Release
+### 3.1.7: Maintenance Release
+
+**Fixes**
+
+ - Fix text-input datetime mode to accept setting time input. Issue #757
+
+### 3.1.6: Maintenance Release
+
+**Fixes**
+
+- Add PR to deduplicate layput list entries. PR #752
+- Really fix date picker to always send selected date. Issue #753
+- Add PR to fix validity checks of node config. PR #755
+- Add datetime option to text input
+
+### 3.1.5: Maintenance Release
+
+**Fixes**
+
+ - Fix dropdown multiselect to search on labels and handle upper/lower case. Issue #749
+ - Fix dropdown to not exit on mixed string and numerics. Issue #748
+
+### 3.1.4: Maintenance Release
+
+**Fixes**
+
+ - Fix colorpicker swatch overlapping colorpicker dial. Issue #746
+ - Let dropdown multiselect "select all" only select those in search. Issue #747
+
+### 3.1.3: Maintenance Release
+
+**Fixes**
+
+ - Remove main entry from package.json. Issue #740
+ - Let date-picker send repeated existing values.
+ - Warn if Node.js version not 12+.
+ - Allow ui-dropdown to accept single string for one valid option.
+ - Fix socketid back to be in sync with reality. Issue #738
+
+### 3.1.2: Maintenance Release
+
+**Fixes**
+
+ - Fix dialogue notification to be able to return 1. Issue #736
+ - Force saving of spacer size. Forum Issue
+
+ ### 3.1.1: Maintenance Release
+
+ **Fixes**
+
+ - Replace ui_control messages feedback block (found out why it was there...)
+
+### 3.1.0: Maintenance Release
+
+**Fixes**
+
+ - Bump socket.io to 4.3.x
+ - Remove ui_control messages weird feedback block (not sure why it was ever there...)
+ - Fix bad class field in text_input. PR #783
+
+### 3.0.4: Major Release
 
 **Enhancements**
 
- - add feedback option to dialog widget.
+ - Set minimum requirement to be Node12 (in line with core)
+ - Bump libraries to latest including socketIO - this also drops node 8 support, Node10 is also EOL
+ - Add optional CSS Class field to core widgets
+
+ **Fixes**
+
+  - Fix dropdown string types (again)
+  - Fix button and switch invalid buffer to not crash NR
+  - Fix form to correctly send false on reset of checkbox and switch
+  - Better position for 1x1 colour picker
+
+### 2.29.3: Maintenance Release
+
+**Fixes**
+
+ - Try to ensure angular palette state really is saved. Issue #554
+ - Let form time type show correct label. Issue #702
+ - Adjust CSS for better alignment of icons in ui-list
+ - Fix color-picker z layer to be behind dropdown if necessary
+
+### 2.29.1: Maintenance Release
+
+**Fixes**
+
+ - Fix dropdown to send strings when requied to do so. Issue #700
+
+### 2.29.0: Maintenance Release
+
+**Enhancements**
+
+ - Allow incoming msg.meta from UI. PR #690
+
+### 2.28.2: Maintenance Release
+
+**Fixes**
+
+ - Fix empty dropdown causing crash on select. PR #686
+ - Fix button not sending blank string. Issue #687
+ - Fix dropdown not returning numbers of type string. Issue #691
+
+### 2.28.1: Maintenance Release
+
+**Fixes**
+
+ - Fix ui-form sizing issue.
+
+### 2.28.0: Milestone Release
+
+**Enhancements**
+
+ - Add two column option to ui_form widget. PR #680
+ - Let topic setting be a typed input for nodes that output topic.
+
+**Fixes**
+
+ - Fix msg.vol for tts out
+ - Fix dropdown again to display input value when in not passing though mode. Issue #675
+ - Fix dropdown to allow clearing/resetting by sending an empty message (part of fix above)
+ - Add option to switch custom icons to animate (a bit) - works with more icon types now.
+
+### 2.27.1: Maintenance Release
+
+**Fixes**
+
+ - Fix CSS for layout grid to render better for some browsers
+ - Add time picker to ui_form options.
+ - Add better German translations. PR #673
+
+### 2.27.0: Milestone Release
+
+**Enhancements**
+
+ - Let user configured middleware be an array. PR #664
+ - Let polar area chart have different colours per series item. PR #662
+
+**Fixes**
+
+ - Fix dropdown pre-select of multiple options
+ - Fix button text colour - dumb mistake. Issue #670
+
+### 2.26.2: Maintenance Release
+
+**Fixes**
+
+ - Fix slider text colour to better contrast with widget background. Issue #665
+ - Check served endpoint to prevent path traversal. Issue #669.
+
+### 2.26.1: Maintenance Release
+
+**Enhancements**
+
+ - Add msg.level to Audio out node to set volume from 0 to 1 (0-100%).
+
+**Fixes**
+
+ - Update German translations. PR #654
+ - Fix level update for weathericons lite.
+ - Ensure dropdown new options are set even when not visible. Issue #479
+ - Fix angular theme for gauges - and some other theme escapes. Issue #649
+
+### 2.26.0: Milestone Release
+
+**Enhancements**
+
+ - Update weather icons to 1.6 to include more wind direction rotations and icons.
+ - Add more Japanese translations for chart and form nodes. PR #653
+
+**Fixes**
+
+ - Fix CSS to remove lots of !important flags to allow override.
+ - Fix examples in ui_template node. PR #651
+ - Ensure ui_base creation is called at more appropriate time so is there ready for nodes when needed.
+
+### 2.25.0: Milestone Release
+
+**Enhancements**
+
+ - Update weather icons to 1.5 to include wind direction rotations.
+
+**Fixes**
+
+ - Fix dropdown to not preselect option if no passthru.
+ - Fix replacing iconify icons so they can be dynamic.
+ - Fix gauge angular filters with space in msg properties.
+ - Try to resize template when restored from collapse. Issue #642.
+
+### 2.24.2: Maintenance Release
+
+**Fixes**
+
+ - Fix to swap switch icons to allow iconify icons to work. PR#597
+ - Tweak dropdown CSS to always try to show select button.
+ - Add node.type class to template so 3rd party nodes can tweak their md-card.
+
+### 2.24.1: Maintenance Release
+
+**Fixes**
+
+ - Fix dropdown single pick search.
+ - Changes to help optimise chart updates and reloads.
+ - Fix ui_text so null msg doesn't blank text on enable and disable.
+ - Add info about Icon usage to README.
+ - Let button icon be settable by `{{property}}`.
+
+### 2.24.0: Milestone Release
+
+**Enhancements**
+
+ - Let sidebar menu optionally show icons only.
+ - Let iconify font icons have size parameter. eg `iconify-mdi:garage-variant 48px`
+
+**Fixes**
+
+ - Fix for dropdown options being options.
+ - Datepicker auto selects first day of week based on browser locale.
+ - Add tooltips for layout fixed/not-fixed icons.
+ - Fix layout drag between groups.
+
+### 2.23.5: Maintenance Release
+
+**Fixes**
+
+ - Set checkbox label to be full width. Issue #622
+ - Add CSS for ui-list menu select to match theme.
+ - Add node-id property to each md-card.
+ - Force time picker image to contrast with background.
+ - Let slider show status even if no nodes attached to output.
+ - Fix dropdown to return correct message type.
+
+### 2.23.4: Maintenance Release
+
+**Fixes**
+
+ - Truncate input data array if larger than number of points required. Issue #617
+ - Fix dropdown regression to handle objects
+ - PR to report correct IP address when using Nginx or proxy. PR #620
+
+### 2.23.3: Maintenance Release
+
+**Fixes**
+
+ - Fix regression in dropdown returning 0 value. Issue #614
+ - Fix ui_textinput-CR to allow any step so floats validate ok. Issue #609
+ - Ensure voice option picks a unique selector. Issue #613
+ - Update libraries to fix missing weather/moon icons
+
+ ### 2.23.2: Maintenance Release
+
+**Fixes**
+
+ - Fix dropdown to correct return values not labels
+
+ ### 2.23.1: Maintenance Release
+
+**Fixes**
+
+ - Fix date picker to return midnight on picked day. PR #600
+ - Add some validation to dropdown widget values to flag duplicates.
+ - Fix dropdown to only return valid options if options changed dynamically.
+ - Fix group spacings to align better.
+ - Fix wave gauge to also allow using random msg properties. Issue #607
+
+### 2.23.0: Milestone Release
+
+**Enhancements**
+
+ - Fix custom colour sidebar choice to actually work.
+ - Dropdown multiselect now allows select/deselect all. PR #590
+ - Add iconify- keyword to icon handling (still need to add js via template).
+ - Let notification node set timeout via msg.timeout property.
+
+**Fixes**
+
+ - Block direct websocket connection attempts - only allow upgrades.
+ - Bump angular libs to 1.8.0 for security patch.
+ - Stop chart sending blank data payload on deploy.
+ - Ensure toast dialog cancel button defaults to on when in prompt with input mode. Issue #596
+ - Remove some hardcoded CSS to help themeing support of editor.
+
+### 2.22.1: Maintenance Release
+
+**Fixes**
+
+ - Re-insert missing weather icons fonts.
+ - Fix slider logic for touch devices. Issue #589
+
+### 2.22.0: Milestone Release
+
+**Enhancements**
+
+ - Add group (open/closed) event to ui_control output.
+ - Let browser bar theme copy dashboard theme (for Android).
+ - Add id to Tab div tag so css can be targetted.
+ - Add option for multi-selects in dropdown. PR #588
+
+**Fixes**
+
+ - Document _dontSend option for beforeSend callback.
+ - Let slider repeat click work in "send at end" mode.
+ - Force client reauth when old socket connection times out and 401s. PR #586
+ - Fix navigation history, so back/formward browser buttons work. PR #587
+ - Force socket.io to use secure link when using https.
+ - Allow dropdowns to take up more space on screen for longer lists.
+ - Make sure we don't fail on a null msg from a template.
+
+### 2.21.0: Milestone Release
+
+**Enhancements**
+
+ - Let tooltip words be settable via {{msg.something}}. Issue #578
+ - Move Gridstack to v0.6.4 - thanks HiroyasuNishiyama. PR #581,580
+
+**Fixes**
+
+ - Fix Form Date input to accept inject of date correctly.
+
+### 2.20.0: Milestone Release
+
+**Enhancements**
+
+ - Add open and close options for groups to ui_control node.
+ - Add cubic and cubic-monotone to chart interpolation options.
+ - Allow ui_control msg to widgets also set .label property.
+ - Add option to try to load dist/loading,html for those that want it.
+ - Add msg.event for button clicks.
+ - Make Gridstack a normal dep so they can count installs. Bump to v0.5.5
+ - Let mousewheel change slider. Issue #575
+ - Add UTC option to Chart node X-Axis.
+ - Add no resend on refresh option to template node.
+
+ **Fixes**
+
+ - Add placeholder to ui-form date type to give a clue that yyyy-mm-dd works for Safari.
+ - Fix dropdown to save topic for input for subsequent selections. Issue #570
+ - Fix colour picker to show appropriate controls by default. Issue #572
+
+### 2.19.4: Maintenance Release
+
+**Enhancements**
+
+ - Add feedback option to dialog widget.
+ - Add persistantFrontEndValue property to addWidget options so it possible to avoid replay message to be sent when front end reconnect. PR #558
+
+ **Fixes**
+
+ - Re-add gridstack min map to reduces warnings.
+ - Added crossorigin attribute to manifest link. PR #560
 
 ### 2.19.3: Maintenance Release
 
@@ -20,7 +366,7 @@
 **Fixes**
 
  - Revert dropping of angular material icons with animation. Issue #552
- 
+
  ### 2.19.1: Maintenance Release
 
 **Enhancements**
@@ -45,7 +391,7 @@
 ### 2.18.0: Milestone Release
 
 **Enhancements**
- 
+
  - Update justgauge to latest (now maintained) version and drop monkeypatch. Issue #535.
  - Add engines node8 to package.json
 

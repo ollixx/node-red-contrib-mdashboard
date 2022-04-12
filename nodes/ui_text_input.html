@@ -1,12 +1,12 @@
 <script type="text/javascript">
-    RED.nodes.registerType('mui_text_input',{
-        category: 'mdashboard',
-        color: 'rgb(204, 219, 234)',
+    RED.nodes.registerType('ui_text_input',{
+        category: RED._("node-red-dashboard/ui_base:ui_base.label.category"),
+        color: 'rgb(176, 223, 227)',
         defaults: {
             name: {value: ''},
             label: {value: ''},
             tooltip: {value: ''},
-            group: {type: 'mui_group', required: true},
+            group: {type: 'ui_group', required: true},
             order: {value: 0},
             width: {value: 0, validate: function(v) {
                     var width = v||0;
@@ -21,7 +21,10 @@
             passthru: {value: true},
             mode: {value: 'text', required: true},
             delay: {value: 300, validate: RED.validators.number()},
-            topic: {value: ''}
+            topic: {value: 'topic', validate: (RED.validators.hasOwnProperty('typedInput')?RED.validators.typedInput('topicType'):function(v) { return true})},
+            sendOnBlur: {value: true},
+	    className: {value: ''},
+            topicType: {value: 'msg'}
         },
         inputs:1,
         outputs:1,
@@ -36,11 +39,16 @@
                 height: "#node-input-height",
                 group: "#node-input-group"
             });
+            $('#node-input-topic').typedInput({
+                default: 'str',
+                typeField: $("#node-input-topicType"),
+                types: ['str','msg','flow','global']
+            });
         }
     });
 </script>
 
-<script type="text/html" data-template-name="mui_text_input">
+<script type="text/html" data-template-name="ui_text_input">
 	<div class="form-row">
         <label for="node-input-group"><i class="fa fa-table"></i> Group</label>
         <input type="text" id="node-input-group">
@@ -69,8 +77,10 @@
             <option value="tel">telephone input</option>
             <option value="color">color picker</option>
             <option value="time">time picker</option>
+            <option value="datetime-local">datetime picker</option>
             <option value="week">week picker</option>
             <option value="month">month picker</option>
+            <!-- <option value="date">date picker</option> -->
         </select>
         <label for="node-input-delay" style="text-align:right; width:100px"><i class="fa fa-clock-o"></i> Delay (ms)</label>
         <input type="text" style="width:58px" id="node-input-delay">
@@ -78,6 +88,10 @@
     <div class="form-row">
         <label style="width:auto" for="node-input-passthru"><i class="fa fa-arrow-right"></i> If <code>msg</code> arrives on input, pass through to output: </label>
         <input type="checkbox" checked id="node-input-passthru" style="display:inline-block; width:auto; vertical-align:top;">
+    </div>
+    <div class="form-row">
+        <label style="width:auto" for="node-input-sendOnBlur">Send value on focus leave: </label>
+        <input type="checkbox" checked id="node-input-sendOnBlur" style="display:inline-block; width:auto; vertical-align:top;">
     </div>
     <div class="form-row">
         <label style="width:auto" for="node-input-payload"><i class="fa fa-envelope-o"></i> When changed, send:</label>
@@ -89,26 +103,15 @@
     <div class="form-row">
         <label for="node-input-topic" style="padding-left: 25px; margin-right: -25px">Topic</label>
         <input type="text" id="node-input-topic">
+        <input type="hidden" id="node-input-topicType">
+    </div>
+    <div class="form-row">
+        <label for="node-input-className"><i class="fa fa-code"></i>  Class</label>
+        <input type="text" id="node-input-className" placeholder="Optional CSS class name(s) for widget"/>
     </div>
     <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
         <input type="text" id="node-input-name">
     </div>
     <div class="form-tips">Setting <b>Delay</b> to 0 waits for Enter or Tab key, to send input.</span></div>
-</script>
-
-<script type="text/html" data-help-name="mui_text_input">
-  <p>Adds a text input field to the user interface. Mode can be regular text, email or color picker.</p>
-  <p>Any input is sent as <code>msg.payload</code>. If set to ‘pass through mode’ an arriving <code>msg.payload</code>
-      will be used if it is different from the existing text in the input field. This allows you to preset
-      the text of the input field.</p>
-  <p>The <b>Delay</b> <i>(default : 300ms)</i> sets the amount of time in milliseconds before the output is sent.
-  Setting to <code>0</code> waits for "Enter" or "Tab" key to send. Enter will send payload but remain in focus.
-  Tab will send payload and move to next field. Clicking elsewhere will also send the payload.</p>
-  <p>The email mode will color in red if it is not a valid address and will return undefined.</p>
-  <p>The time input type returns a number of milliseconds from midnight.</p>
-  <p>Not all browsers support the <i>week</i> and <i>month</i> input types, and may return <i>undefined</i>.
-  Please test your target browser(s) before use.</p>
-  <p>If a <b>Topic</b> is specified, it will be added as <code>msg.topic</code>.</p>
-  <p>Setting <code>msg.enabled</code> to <code>false</code> will disable the input.</p>
 </script>

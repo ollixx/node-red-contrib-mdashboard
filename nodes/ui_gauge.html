@@ -8,12 +8,12 @@
     }
 </style>
 <script type="text/javascript">
-    RED.nodes.registerType('mui_gauge',{
-        category: 'mdashboard',
-        color: 'rgb(185, 203, 220)',
+    RED.nodes.registerType('ui_gauge',{
+        category: RED._("node-red-dashboard/ui_base:ui_base.label.category"),
+        color: 'rgb(119, 198, 204)',
         defaults: {
             name: {value: ''},
-            group: {type: 'mui_group', required: true},
+            group: {type: 'ui_group', required: true},
             order: {value: 0},
             width: {value: 0, validate: function(v) {
                     var width = v || 0;
@@ -33,7 +33,8 @@
             max: {value: 10, required: true, validate: RED.validators.number()},
             colors: {value: ["#00B500","#E6E600","#CA3838"]},
             seg1: {value: ""},
-            seg2: {value: ""}
+            seg2: {value: ""},
+            className: {value: ''}
         },
         inputs:1,
         outputs:0,
@@ -79,12 +80,6 @@
                 group: "#node-input-group"
             });
             $("#node-input-gtype").on("change", function() {
-                if ($(this).val() === "wave") {
-                    $("#ui-gauge-format").hide();
-                }
-                else {
-                    $("#ui-gauge-format").show();
-                }
                 if (($(this).val() === "compass") || ($(this).val() === "wave")) {
                     $("#ui-gauge-colours").hide();
                     $("#ui-gauge-segments").hide();
@@ -107,7 +102,7 @@
     });
 </script>
 
-<script type="text/html" data-template-name="mui_gauge">
+<script type="text/html" data-template-name="ui_gauge">
     <div class="form-row">
         <label for="node-input-group"><i class="fa fa-table"></i> Group</label>
         <input type="text" id="node-input-group">
@@ -120,7 +115,7 @@
     </div>
     <div class="form-row">
         <label for="node-input-gtype"><i class="fa fa-list"></i> Type</label>
-        <select id="node-input-gtype" style="width:200px !important">
+        <select id="node-input-gtype" style="width:150px">
             <option value="gage">Gauge</option>
             <option value="donut">Donut</option>
             <option value="compass">Compass</option>
@@ -162,22 +157,11 @@
         <span id="seg-max" style="display:inline-block; width:40px; text-align:right">10</span>
     </div>
     <div class="form-row">
+        <label for="node-input-className"><i class="fa fa-code"></i>  Class</label>
+        <input type="text" id="node-input-className" placeholder="Optional CSS class name(s) for widget"/>
+    </div>    
+    <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
         <input type="text" id="node-input-name">
     </div>
-</script>
-
-<script type="text/html" data-help-name="mui_gauge">
-    <p>Adds a gauge type widget to the user interface.</p>
-    <p>The <code>msg.payload</code> is searched for a numeric <i>value</i> and is formatted in accordance with
-    the defined <b>Value Format</b>, which can then be formatted using
-    <a href="https://scotch.io/tutorials/all-about-the-built-in-angularjs-filters" target="_blank">Angular filters</a>.</p>
-    <p>For example : <code>{{value | number:1}}%</code> will round the value to one decimal place and append a % sign.</p>
-    <p>The colours of each of 3 sectors can be specified and the gauge will blend between them.
-    The colours should be specified in hex (#rrggbb) format.</p>
-    <p>If you specify numbers for the sectors then the colours changes per sector.
-    If not specified the colours are blended across the total range.</p>
-    <p>The gauge has several modes. Regular gauge, donut, compass and wave.</p>
-    <p>The label can also be set by a message property by setting
-    the field to the name of the property, for example <code>{{msg.topic}}</code>.</p>
 </script>

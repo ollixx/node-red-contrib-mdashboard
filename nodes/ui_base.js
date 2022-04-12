@@ -1,8 +1,9 @@
 module.exports = function(RED) {
     var ui = require('../ui')(RED);
     var path= require('path');
+    var gsp = require.resolve('gridstack');
     var node;
-    var set = RED.settings.mui || "{}";
+    var uiset = RED.settings.ui || "{}";
 
     function BaseNode(config) {
         RED.nodes.createNode(this, config);
@@ -26,7 +27,8 @@ module.exports = function(RED) {
             primary:'indigo',
             accents:'teal',
             warn: "red",
-            background:'grey'
+            background:'grey',
+            palette:'light'
         };
 
         // Setup theme name
@@ -56,7 +58,7 @@ module.exports = function(RED) {
             defaultThemeState["base-color"] = {value: "#097479"};
             defaultThemeState["page-backgroundColor"] = {value: "#111111"};
             defaultThemeState["page-titlebar-backgroundColor"] = {value: "#097479"};
-            defaultThemeState["page-sidebar-backgroundColor"] = {value: "#000000"};
+            defaultThemeState["page-sidebar-backgroundColor"] = {value: "#333333"};
             defaultThemeState["group-backgroundColor"] = {value: "#333333"};
             defaultThemeState["group-textColor"] = {value: "#10cfd8"};
             defaultThemeState["group-borderColor"] = {value: "#555555"};
@@ -79,38 +81,44 @@ module.exports = function(RED) {
         }
         ui.addBaseConfig(this.config);
     }
-    RED.nodes.registerType("mui_base", BaseNode);
+    RED.nodes.registerType("ui_base", BaseNode);
 
     RED.library.register("themes");
 
     RED.httpAdmin.get('/uisettings', function(req, res) {
-        res.json(set);
+        res.json(uiset);
     });
 
+    const optsjs = { root: path.join(__dirname , '../dist/js'), dotfiles: 'deny' };
+    const optscss = { root: path.join(__dirname , '../dist/css'), dotfiles: 'deny' };
+    const optsgs = { root: path.dirname(gsp), dotfiles: 'deny' };
+
     RED.httpAdmin.get('/ui_base/js/*', function(req, res) {
-        var filename = path.join(__dirname , '../dist/js', req.params[0]);
-        res.sendFile(filename, function (err) {
+        res.sendFile(req.params[0], optsjs, function (err) {
             if (err) {
-                if (node) {
-                    node.warn(filename + " not found. Maybe running in dev mode.");
-                }
-                else {
-                    console.log("ui_base - error:",err);
-                }
+                res.sendStatus(404);
+                if (node) { node.warn("JS File not found."); }
+                else { console.log("ui_base - error:",err); }
             }
         });
     });
 
     RED.httpAdmin.get('/ui_base/css/*', function(req, res) {
-        var filename = path.join(__dirname , '../dist/css', req.params[0]);
-        res.sendFile(filename, function (err) {
+        res.sendFile(req.params[0], optscss, function (err) {
             if (err) {
-                if (node) {
-                    node.warn(filename + " not found. Maybe running in dev mode.");
-                }
-                else {
-                    console.log("ui_base - error:",err);
-                }
+                res.sendStatus(404);
+                if (node) { node.warn("CSS File not found."); }
+                else { console.log("ui_base - error:",err); }
+            }
+        });
+    });
+
+    RED.httpAdmin.get('/ui_base/gs/*', function(req, res) {
+        res.sendFile(req.params[0], optsgs, function (err) {
+            if (err) {
+                res.sendStatus(404);
+                if (node) { node.warn("Gridstack file not found."); }
+                else { console.log("ui_base - error:",err); }
             }
         });
     });

@@ -30,6 +30,10 @@ module.exports = function(RED) {
             payload = payload || node.id;
         }
 
+        node.on("input", function(msg) {
+            node.topi = RED.util.evaluateNodeProperty(config.topic,config.topicType || "str",node,msg);
+        });
+
         var done = ui.add({
             node: node,
             tab: tab,
@@ -43,6 +47,7 @@ module.exports = function(RED) {
                 tooltip: config.tooltip,
                 color: config.color,
                 bgcolor: config.bgcolor,
+                className: config.className,
                 icon: config.icon,
                 order: config.order,
                 value: payload,
@@ -50,15 +55,25 @@ module.exports = function(RED) {
                 width: config.width || group.config.width || 3,
                 height: config.height || 1
             },
-            beforeSend: function (msg) {
-                msg.topic = config.topic || msg.topic;
+            beforeSend: function (msg,m2) {
+                var t = RED.util.evaluateNodeProperty(config.topic,config.topicType || "str",node,msg)
+                if (typeof t === "undefined") { t = node.topi; }
+                if (t !== undefined) { msg.topic = t; }
+                if (((config.topicType || "str") === "str") && t == "") { delete msg.topic; }
+                if (m2 !== undefined) { msg.event = m2.event; }
             },
             convertBack: function (value) {
                 if (payloadType === "date") {
                     value = Date.now();
                 }
                 else {
-                    value = RED.util.evaluateNodeProperty(payload,payloadType,node);
+                    try {
+                        value = RED.util.evaluateNodeProperty(payload,payloadType,node);
+                    }
+                    catch(e) {
+                        if (payloadType === "bin") { node.error("Badly formatted buffer"); }
+                        else { node.error(e,payload); }
+                    }
                 }
                 return value;
             }

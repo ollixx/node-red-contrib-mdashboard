@@ -2,7 +2,6 @@ module.exports = function(RED) {
     var ui = require('../ui')(RED);
 
     function TemplateNode(config) {
-        const socketIdVsHeaders = new Map();
         RED.nodes.createNode(this, config);
         var node = this;
 
@@ -29,6 +28,7 @@ module.exports = function(RED) {
         var done = ui.add({
             forwardInputMessages: config.fwdInMessages,
             storeFrontEndInputAsState: config.storeOutMessages,
+            persistantFrontEndValue: config.resendOnRefresh,
             emitOnlyNewValues: false,
             node: node,
             tab: tab,
@@ -40,7 +40,8 @@ module.exports = function(RED) {
                 height: hei,
                 format: config.format,
                 templateScope: config.templateScope,
-                theme: colortheme
+                theme: colortheme,
+                className: config.className || '',
             },
             beforeEmit: function(msg) {
                 var properties = Object.getOwnPropertyNames(msg).filter(function (p) { return p[0] != '_'; });
@@ -75,56 +76,15 @@ module.exports = function(RED) {
                 return { msg:clonedMsg };
             },
             beforeSend: function (msg, original) {
-                if (original) {
-                    const headers = socketIdVsHeaders.get(original.socketid);
-                    if (original.socketid) {
-                        original.msg.socketid = original.socketid;
-                    }
-                    if (headers) {
-                        original.msg.headers = headers;
-                    }
-                    return original.msg;
+                if (original && original.hasOwnProperty("msg") && original.msg !== null) {
+                    var om = original.msg;
+                    om.socketid = original.socketid;
+                    return om;
                 }
             }
         });
         node.on("close", done);
-
-        var sendconnect = function(socketid, socketip, headers, queryParams) {
-            if (socketid && headers) {
-                socketIdVsHeaders.set(socketid, headers);
-            }
-            node.send({
-                session:{
-                    state: "connect"
-                },
-                socketid,
-                socketip,
-                headers
-            });
-        };
-        ui.ev.on('newsocket', sendconnect);
-
-        var sendlost = function(socketid, socketip, headers, queryParams) {
-            if (socketid) {
-                socketIdVsHeaders.delete(socketid);
-            }
-            node.send({
-                session:{
-                    state: "disconnect"
-                },
-                socketid,
-                socketip,
-                headers
-            });
-        };
-        ui.ev.on('endsocket', sendlost);
-
-        this.on('close', function() {
-            ui.ev.removeListener('newsocket', sendconnect);
-            ui.ev.removeListener('endsocket', sendlost);
-        })
-
     }
-    RED.nodes.registerType("mui_template", TemplateNode);
+    RED.nodes.registerType("ui_template", TemplateNode);
     RED.library.register("uitemplates");
 };

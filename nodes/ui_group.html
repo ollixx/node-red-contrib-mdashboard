@@ -1,20 +1,21 @@
 <script type="text/javascript">
     // convert to i18 text
     function c_ui_group(x) {
-        return RED._("node-red-contrib-mdashboard/mui_group:ui_group."+x);
+        return RED._("node-red-dashboard/ui_group:ui_group."+x);
     }
 
-    RED.nodes.registerType('mui_group',{
+    RED.nodes.registerType('ui_group',{
         category: 'config',
         defaults: {
             name: {value: c_ui_group("label.default")},
-            tab: {type:"mui_tab", required: true },
+            tab: {type:"ui_tab", required: true },
             order: {value: 0},
             disp: {value: true},
             width: {value: 6},
             collapse: {value: false},
             disabled: {value: false},
-            hidden: {value: false}
+            hidden: {value: false},
+            className: {value: ''},
         },
         sort: function(A,B) {
             if (A.tab !== B.tab) {
@@ -59,7 +60,7 @@
     });
 </script>
 
-<script type="text/html" data-template-name="mui_group">
+<script type="text/html" data-template-name="ui_group">
     <div class="form-row">
         <label for="node-config-input-name"><i class="fa fa-tag"></i> <span data-i18n="ui_group.label.name"></span></label>
         <input type="text" id="node-config-input-name">
@@ -67,6 +68,10 @@
     <div class="form-row">
         <label for="node-config-input-tab"><i class="fa fa-table"></i> <span data-i18n="ui_group.label.tab"></span></label>
         <input type="text" id="node-config-input-tab">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-className"><i class="fa fa-code"></i>  <span data-i18n="ui_group.label.className"></label>
+        <input type="text" id="node-config-input-className" data-i18n="[placeholder]ui_group.label.classNamePlaceholder"/>
     </div>
     <div class="form-row">
         <label for="node-config-input-width"><i class="fa fa-arrows-h"></i> <span data-i18n="ui_group.label.width"></span></label>
@@ -79,8 +84,4 @@
     <div class="form-row" id="group-collapse-flag">
         <input style="margin:8px 0 10px 102px; width:20px;" type="checkbox" id="node-config-input-collapse"> <label style="width:auto" for="node-config-input-collapse"><span data-i18n="ui_group.collapse-name"></span></label>
     </div>
-</script>
-
-<script type="text/html" data-help-name="mui_group">
-    <p>Group</p>
 </script>

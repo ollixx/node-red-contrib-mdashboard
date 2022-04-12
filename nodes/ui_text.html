@@ -1,9 +1,9 @@
 <script type="text/javascript">
-    RED.nodes.registerType('mui_text',{
-        category: 'mdashboard',
-        color: 'rgb(185, 203, 220)',
+    RED.nodes.registerType('ui_text',{
+        category: RED._("node-red-dashboard/ui_base:ui_base.label.category"),
+        color: 'rgb(119, 198, 204)',
         defaults: {
-            group: {type: 'mui_group', required:true},
+            group: {type: 'ui_group', required:true},
             order: {value: 0},
             width: {value: 0, validate: function(v) {
                     var width = v||0;
@@ -18,7 +18,8 @@
             name: {value: ''},
             label: {value: 'text'},
             format: {value: '{{msg.payload}}'},
-            layout: {value:'row-spread'}
+            layout: {value:'row-spread'},
+            className: {value: ''}
         },
         inputs:1,
         outputs:0,
@@ -49,7 +50,7 @@
     });
 </script>
 
-<script type="text/html" data-template-name="mui_text">
+<script type="text/html" data-template-name="ui_text">
     <div class="form-row">
         <label for="node-input-group"><i class="fa fa-table"></i> Group</label>
         <input type="text" id="node-input-group">
@@ -102,6 +103,10 @@
             </a>
         </div>
         </div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-className"><i class="fa fa-code"></i>  Class</label>
+        <input type="text" id="node-input-className" placeholder="Optional CSS class name(s) for widget"/>
     </div>
     <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
@@ -165,18 +170,3 @@
     }
 
 </style>
-<script type="text/html" data-help-name="mui_text">
-    <p>Will display a non-editable text field on the user interface.</p>
-    <p>Each received <code>msg.payload</code> will update the text based on the provided <b>Value Format</b>.</p>
-    <p>The <b>Value Format</b> field can be used to change the displayed format and can contain valid HTML and
-    <a href="https://scotch.io/tutorials/all-about-the-built-in-angularjs-filters" target="_blank">Angular filters</a>.</p>
-    <p>For example: <code>{{value | uppercase}} &amp;deg;</code> will uppercase the payload text and add the degree symbol.</p>
-    <p>The label can also be set by a message property by setting
-    the field to the name of the property, for example <code>{{msg.topic}}</code>.</p>
-    <p>The following icon fonts are also available: <a href="https://klarsys.github.io/angular-material-icons/" target="_blank">Material Design icon</a>
-        <i>(e.g. 'check', 'close')</i> or a <a href="https://fontawesome.com/v4.7.0/icons/" target="_blank">Font Awesome icon</a>
-        <i>(e.g. 'fa-fire')</i>, or a <a href="https://github.com/Paul-Reed/weather-icons-lite/blob/master/css_mappings.md">Weather icon</a>.
-        You can use the full set of google material icons if you add 'mi-' to the icon name. e.g. 'mi-videogame_asset'.</p>
-    <p>The widget also has a class of <code>nr-dashboard-widget-{the_widget_label_with_underscores}</code> which can be used for additional
-        styling if required. You may need to use the <i>!important</i> flag to override the theme.</p>
-</script>

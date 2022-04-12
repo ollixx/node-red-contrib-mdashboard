@@ -25,9 +25,10 @@ module.exports = function(RED) {
 var fs = require('fs');
 var path = require('path');
 var events = require('events');
+var process = require('process');
 var socketio = require('socket.io');
 var serveStatic = require('serve-static');
-var compression = require('compression')
+var compression = require('compression');
 var dashboardVersion = require('./package.json').version;
 
 var baseConfiguration = {};
@@ -47,7 +48,7 @@ ev.setMaxListeners(0);
 // default manifest.json to be returned as required.
 var mani = {
     "name": "Node-RED Dashboard",
-    "short_name": "mDashboard",
+    "short_name": "Dashboard",
     "description": "A dashboard for Node-RED",
     "start_url": "./#/0",
     "background_color": "#910000",
@@ -61,7 +62,7 @@ var mani = {
 }
 
 function toNumber(keepDecimals, config, input, old, m, s) {
-    if (input === undefined) { return; }
+    if (input === undefined || input === null) { return; }
     if (typeof input !== "number") {
         var inputString = input.toString();
         input = keepDecimals ? parseFloat(inputString) : parseInt(inputString);
@@ -81,11 +82,9 @@ function emitSocket(event, data) {
     else if (data.hasOwnProperty("socketid") && (data.socketid !== undefined)) {
         io.to(data.socketid).emit(event, data);
     }
-/*
     else {
         io.emit(event, data);
     }
-*/
 }
 
 function noConvert(value) {
@@ -113,12 +112,15 @@ options:
         If true, forwards input messages to the output
     [storeFrontEndInputAsState] - boolean (default true).
         If true, any message received from front-end is stored as state
+    [persistantFrontEndValue] - boolean (default true).
+        If true, last received message is send again when front end reconnect.
 
     [convert] - callback to convert the value before sending it to the front-end
     [beforeEmit] - callback to prepare the message that is emitted to the front-end
 
     [convertBack] - callback to convert the message from front-end before sending it to the next connected node
-    [beforeSend] - callback to prepare the message that is sent to the output
+    [beforeSend] - callback to prepare the message that is sent to the output,
+        if the returned msg has a property _dontSend, then it won't get sent.
 */
 function add(opt) {
     clearTimeout(removeStateTimers[opt.node.id]);
@@ -133,6 +135,9 @@ function add(opt) {
     if (typeof opt.storeFrontEndInputAsState === 'undefined') {
         opt.storeFrontEndInputAsState = true;
     }
+    if (typeof opt.persistantFrontEndValue === 'undefined') {
+        opt.persistantFrontEndValue = true;
+    }
     opt.convert = opt.convert || noConvert;
     opt.beforeEmit = opt.beforeEmit || beforeEmit;
     opt.convertBack = opt.convertBack || noConvert;
@@ -145,7 +150,7 @@ function add(opt) {
             var state = replayMessages[opt.node.id];
             if (!state) { replayMessages[opt.node.id] = state = {id: opt.node.id}; }
             state.disabled = !msg.enabled;
-            // io.emit(updateValueEventName, state);
+            io.emit(updateValueEventName, state); // dcj mu
         }
 
         // remove res and req as they are often circular
@@ -160,7 +165,7 @@ function add(opt) {
             var changed = {};
             for (var property in msg.ui_control) {
                 if (msg.ui_control.hasOwnProperty(property) && opt.control.hasOwnProperty(property)) {
-                    if ((property !== "id")&&(property !== "type")&&(property !== "order")&&(property !== "name")&&(property !== "value")&&(property !== "label")&&(property !== "width")&&(property !== "height")) {
+                    if ((property !== "id")&&(property !== "type")&&(property !== "order")&&(property !== "name")&&(property !== "value")&&(property !== "width")&&(property !== "height")) {
                         opt.control[property] = msg.ui_control[property];
                         changed[property] = msg.ui_control[property];
                     }
@@ -179,7 +184,7 @@ function add(opt) {
         // If the update flag is set, emit the newPoint, and store the full dataset
         var fullDataset;
         var newPoint;
-        if ((typeof(conversion) === 'object') && (conversion.update !== undefined)) {
+        if ((typeof(conversion) === 'object') && (conversion !== null) && (conversion.update !== undefined)) {
             newPoint = conversion.newPoint;
             fullDataset = conversion.updatedValues;
         }
@@ -192,7 +197,6 @@ function add(opt) {
             // the full dataset or the new value (e.g. gauges)
             fullDataset = conversion;
         }
-
         // If we have something new to emit
         if (newPoint !== undefined || !opt.emitOnlyNewValues || oldValue != fullDataset) {
             currentValues[opt.node.id] = fullDataset;
@@ -226,6 +230,7 @@ function add(opt) {
                                 if (Buffer.isBuffer(msg[b])) { toEmit.msg[b] = msg[b].toString("binary"); }
                                 else { toEmit.msg[b] = JSON.parse(JSON.stringify(msg[b])); }
                             }
+                            //if (Object.keys(toEmit.msg).length === 0) { delete toEmit.msg; }
                         }
                         else {
                             if (b.indexOf(".") !== -1) { b = b.split(".")[0]; }
@@ -239,28 +244,31 @@ function add(opt) {
                 }
             }
 
-            // if label, format or color field is set to a msg property, emit that as well
+            // if label, format, color, units, tooltip or icon fields are set to a msg property, emit that as well
+            addField("className");
             addField("label");
             addField("format");
             addField("color");
             addField("units");
+            addField("tooltip");
+            addField("icon");
             if (msg.hasOwnProperty("enabled")) { toEmit.disabled = !msg.enabled; }
+            if (msg.hasOwnProperty("className")) { toEmit.className = msg.className; }
             toEmit.id = toStore.id = opt.node.id;
-            toEmit.socketid = msg.socketid;
-
+            //toEmit.socketid = msg.socketid; // dcj mu
             // Emit and Store the data
             //if (settings.verbose) { console.log("UI-EMIT",JSON.stringify(toEmit)); }
-            /*
-                Commented out for multi user dash- update only the particular socket
-                replayMessages[opt.node.id] = toStore;
-            */
             emitSocket(updateValueEventName, toEmit);
+            if (opt.persistantFrontEndValue === true) {
+                replayMessages[opt.node.id] = toStore;
+            }
+
             // Handle the node output
-            if (opt.forwardInputMessages && opt.node._wireCount) {
+            if (opt.forwardInputMessages && opt.node._wireCount && fullDataset !== undefined) {
                 msg.payload = opt.convertBack(fullDataset);
                 msg = opt.beforeSend(msg) || msg;
                 //if (settings.verbose) { console.log("UI-SEND",JSON.stringify(msg)); }
-                opt.node.send(msg);
+                if (!msg._dontSend) { opt.node.send(msg); }
             }
         }
     });
@@ -268,23 +276,25 @@ function add(opt) {
     // This is the handler for messages coming back from the UI
     var handler = function (msg) {
         if (msg.id !== opt.node.id) { return; }  // ignore if not us
-        if (settings.readOnly === true) {
-            msg.value = currentValues[msg.id];
-        } // don't accept input if we are in read only mode
-        else {
-            var converted = opt.convertBack(msg.value);
-            if (opt.storeFrontEndInputAsState === true) {
-                currentValues[msg.id] = converted;
+        if (settings.readOnly === true) { return; } // don't accept input if we are in read only mode
+        var converted = opt.convertBack(msg.value);
+        if (opt.storeFrontEndInputAsState === true) {
+            currentValues[msg.id] = converted;
+            if (opt.persistantFrontEndValue === true) {
                 replayMessages[msg.id] = msg;
             }
-            var toSend = {payload:converted};
-            toSend = opt.beforeSend(toSend, msg) || toSend;
-            toSend.socketid = toSend.socketid || msg.socketid;
-            if (toSend.hasOwnProperty("topic") && (toSend.topic === undefined)) { delete toSend.topic; }
-            if (!msg.hasOwnProperty("_fromInput")) {   // TODO: too specific
-                opt.node.send(toSend);      // send to following nodes
-            }
         }
+        var toSend = {payload:converted};
+        toSend = opt.beforeSend(toSend, msg) || toSend;
+
+        if (toSend !== undefined) {
+            toSend.socketid = toSend.socketid || msg.socketid;
+            if (msg.hasOwnProperty("meta")) { toSend.meta = msg.meta; }
+            if (toSend.hasOwnProperty("topic") && (toSend.topic === undefined)) { delete toSend.topic; }
+            // send to following nodes
+            if (!msg.hasOwnProperty("_dontSend")) { opt.node.send(toSend); }
+        }
+
         if (opt.storeFrontEndInputAsState === true) {
             //fwd to all UI clients
             io.emit(updateValueEventName, msg);
@@ -313,11 +323,11 @@ function join() {
 }
 
 function init(server, app, log, redSettings) {
-    var uiSettings = redSettings.mui || {};
+    var uiSettings = redSettings.ui || {};
     if ((uiSettings.hasOwnProperty("path")) && (typeof uiSettings.path === "string")) {
         settings.path = uiSettings.path;
     }
-    else { settings.path = 'mui'; }
+    else { settings.path = 'ui'; }
     if ((uiSettings.hasOwnProperty("readOnly")) && (typeof uiSettings.readOnly === "boolean")) {
         settings.readOnly = uiSettings.readOnly;
     }
@@ -333,7 +343,7 @@ function init(server, app, log, redSettings) {
     var dashboardMiddleware = function(req, res, next) { next(); }
 
     if (uiSettings.middleware) {
-        if (typeof uiSettings.middleware === "function") {
+        if (typeof uiSettings.middleware === "function" || Array.isArray(uiSettings.middleware)) {
             dashboardMiddleware = uiSettings.middleware;
         }
     }
@@ -359,11 +369,36 @@ function init(server, app, log, redSettings) {
         }
     });
 
-    log.info("mDashboard version " + dashboardVersion + " started at " + fullPath);
+    if ( process.versions.node.split('.')[0] < 12 ) {
+        log.error("Dashboard version "+dashboardVersion+" requires Nodejs 12 or more recent");
+    }
+    else {
+        log.info("Dashboard version " + dashboardVersion + " started at " + fullPath);
+    }
+
+    if (typeof uiSettings.ioMiddleware === "function") {
+        io.use(uiSettings.ioMiddleware);
+    } else if (Array.isArray(uiSettings.ioMiddleware)) {
+        uiSettings.ioMiddleware.forEach(function (ioMiddleware) {
+            io.use(ioMiddleware);
+        });
+    } else {
+        io.use(function (socket, next) {
+            if (socket.client.conn.request.url.indexOf("transport=websocket") !== -1) {
+                // Reject direct websocket requests
+                socket.client.conn.close();
+                return;
+            }
+            if (socket.handshake.xdomain === false) {
+                return next();
+            } else {
+                socket.disconnect(true);
+            }
+        });
+    }
 
     io.on('connection', function(socket) {
-        ev.emit("newsocket", socket.client.id, socket.request.connection.remoteAddress, socket.handshake.headers, socket.handshake.query); //todo also send query parameters- socket.handshake.query (https://stackoverflow.com/a/39711590)
-        //todo and header uid- socket.handshake.headers (https://stackoverflow.com/questions/15503308/how-can-i-get-the-hostname-of-a-socket)
+        ev.emit("newsocket", socket.id, socket.request.headers['x-real-ip'] || socket.request.headers['x-forwarded-for'] || socket.request.connection.remoteAddress);
         updateUi(socket);
 
         socket.on(updateValueEventName, ev.emit.bind(ev, updateValueEventName));
@@ -380,17 +415,20 @@ function init(server, app, log, redSettings) {
             var name = "";
             if ((index != null) && !isNaN(index) && (menu.length > 0) && (index < menu.length) && menu[index]) {
                 name = (menu[index].hasOwnProperty("header") && typeof menu[index].header !== 'undefined') ? menu[index].header : menu[index].name;
-                ev.emit("changetab", index, name, socket.client.id, socket.request.connection.remoteAddress, params);
+                ev.emit("changetab", index, name, socket.id, socket.request.headers['x-real-ip'] || socket.request.headers['x-forwarded-for'] || socket.request.connection.remoteAddress, params);
             }
+        });
+        socket.on('ui-collapse', function(d) {
+            ev.emit("collapse", d.group, d.state, socket.id, socket.request.headers['x-real-ip'] || socket.request.headers['x-forwarded-for'] || socket.request.connection.remoteAddress);
         });
         socket.on('ui-refresh', function() {
             updateUi();
         });
         socket.on('disconnect', function() {
-            ev.emit("endsocket", socket.client.id, socket.request.connection.remoteAddress, socket.handshake.headers, socket.handshake.query); //todo also send query parameters- socket.handshake.query (https://stackoverflow.com/a/39711590)
+            ev.emit("endsocket", socket.id, socket.request.headers['x-real-ip'] || socket.request.headers['x-forwarded-for'] || socket.request.connection.remoteAddress);
         });
         socket.on('ui-audio', function(audioStatus) {
-            ev.emit("audiostatus", audioStatus, socket.client.id, socket.request.connection.remoteAddress);
+            ev.emit("audiostatus", audioStatus, socket.id, socket.request.headers['x-real-ip'] || socket.request.headers['x-forwarded-for'] || socket.request.connection.remoteAddress);
         });
         socket.on('ui-params', function(p) {
             delete p.socketid;
@@ -460,8 +498,11 @@ function addControl(tab, groupHeader, control) {
         groupHeader = groupHeader || settings.defaultGroupHeader;
         control.order = parseFloat(control.order);
 
-        var foundTab = find(menu, function (t) {return t.id === tab.id });
+        var foundTab = find(menu, function (t) {
+            if (tab && tab.hasOwnProperty("id")) { return t.id === tab.id }
+        });
         if (!foundTab) {
+            if (tab === null) { return; }
             foundTab = {
                 id: tab.id,
                 header: tab.config.name,
@@ -519,13 +560,14 @@ function addControl(tab, groupHeader, control) {
     }
 }
 
-function addLink(name, link, icon, order, target) {
+function addLink(name, link, icon, order, target, className) {
     var newLink = {
         name: name,
         link: link,
         icon: icon,
         order: order || 1,
-        target: target
+        target: target,
+        className: className
     };
 
     menu.push(newLink);
@@ -544,13 +586,27 @@ function addBaseConfig(config) {
     if (config) { baseConfiguration = config; }
     mani.name = config.site ? config.site.name : "Node-RED Dashboard";
     mani.short_name = mani.name.replace("Node-RED","").trim();
-    mani.background_color = config.theme.themeState["m-page-titlebar-backgroundColor"].value;
-    mani.theme_color = config.theme.themeState["m-page-titlebar-backgroundColor"].value;
+    mani.background_color = config.theme.themeState["page-titlebar-backgroundColor"].value;
+    mani.theme_color = config.theme.themeState["page-titlebar-backgroundColor"].value;
     updateUi();
 }
 
+function angularColorToHex(color) {
+    var angColorValues = { red: "#F44336", pink: "#E91E63", purple: "#9C27B0", deeppurple: "#673AB7",
+        indigo: "#3F51B5", blue: "#2196F3", lightblue: "#03A9F4", cyan: "#00BCD4", teal: "#009688",
+        green: "#4CAF50", lightgreen: "#8BC34A", lime: "#CDDC39", yellow: "#FFEB3B", amber: "#FFC107",
+        orange: "#FF9800", deeporange: "#FF5722", brown: "#795548", grey: "#9E9E9E", bluegrey: "#607D8B"};
+    return angColorValues[color.replace("-","").toLowerCase()];
+}
+
 function getTheme() {
-    if (baseConfiguration && baseConfiguration.hasOwnProperty("theme") && (typeof baseConfiguration.theme !== "undefined") ) {
+    if (baseConfiguration && baseConfiguration.site && baseConfiguration.site.allowTempTheme && baseConfiguration.site.allowTempTheme === "none") {
+        baseConfiguration.theme.name = "theme-custom";
+        baseConfiguration.theme.themeState["widget-backgroundColor"].value = angularColorToHex(baseConfiguration.theme.angularTheme.primary);
+        baseConfiguration.theme.themeState["widget-textColor"].value = (baseConfiguration.theme.angularTheme.palette === "dark") ? "#fff" : "#000";
+        return baseConfiguration.theme.themeState;
+    }
+    else if (baseConfiguration && baseConfiguration.hasOwnProperty("theme") && (typeof baseConfiguration.theme !== "undefined") ) {
         return baseConfiguration.theme.themeState;
     }
     else {
@@ -568,8 +624,14 @@ function getSizes() {
 }
 
 function isDark() {
-    if (baseConfiguration && baseConfiguration.hasOwnProperty("theme") && baseConfiguration.theme.hasOwnProperty("themeState")) {
-        var rgb = parseInt(baseConfiguration.theme.themeState["page-sidebar-backgroundColor"].value.substring(1), 16);
+    if (baseConfiguration && baseConfiguration.site && baseConfiguration.site.allowTempTheme && baseConfiguration.site.allowTempTheme === "none") {
+        if (baseConfiguration && baseConfiguration.hasOwnProperty("theme") && baseConfiguration.theme.hasOwnProperty("angularTheme")) {
+            if (baseConfiguration.theme.angularTheme && baseConfiguration.theme.angularTheme.palette && baseConfiguration.theme.angularTheme.palette === "dark") { return true;}
+        }
+        return false;
+    }
+    else if (baseConfiguration && baseConfiguration.hasOwnProperty("theme") && baseConfiguration.theme.hasOwnProperty("themeState")) {
+        var rgb = parseInt(baseConfiguration.theme.themeState["page-backgroundColor"].value.substring(1), 16);
         var luma = 0.2126 * ((rgb >> 16) & 0xff) + 0.7152 * ((rgb >> 8) & 0xff) + 0.0722 * ((rgb >> 0) & 0xff); // per ITU-R BT.709
         if (luma > 128) { return false; }
         else { return true; }

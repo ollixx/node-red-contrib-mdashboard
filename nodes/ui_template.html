@@ -1,15 +1,14 @@
 <script type="text/javascript">
     // convert to i18 text
-    //TODO- look at other similar c_ functions in ui_*.html - replace ui with mui
     function c_(x) {
         return RED._("node-red-dashboard/ui_template:ui_template."+x);
     }
 
-    RED.nodes.registerType('mui_template',{
-        category: 'mdashboard',
-        color: 'rgb(173,194,214)',
+    RED.nodes.registerType('ui_template',{
+        category: RED._("node-red-dashboard/ui_base:ui_base.label.category"),
+        color: 'rgb( 63, 173, 181)',
         defaults: {
-            group: {type: 'mui_group', required:false},
+            group: {type: 'ui_group', required:false},
             name: {value: ''},
             order: {value: 0},
             width: {value: 0, validate: function(v) {
@@ -27,7 +26,9 @@
             format: {value: '<div ng-bind-html="msg.payload"></div>'},
             storeOutMessages: {value: true},
             fwdInMessages: {value: true},
-            templateScope: {value: 'local'}
+            resendOnRefresh: {value: true},
+            templateScope: {value: 'local'},
+            className: {value: ''}
         },
         inputs:1,
         outputs:1,
@@ -66,11 +67,11 @@
 
             $('#node-input-templateScope').on('change', function() {
                 if ($('#node-input-templateScope').val() === 'global') {
-                    $('#template-row-group, #template-row-size, #template-pass-store').hide();
+                    $('#template-row-group, #template-row-size, #template-pass-store, #template-row-class').hide();
                     that._def.defaults.group.required = false;
                 }
                 else {
-                    $('#template-row-group, #template-row-size, #template-pass-store').show();
+                    $('#template-row-group, #template-row-size, #template-pass-store, #template-row-class').show();
                     that._def.defaults.group.required = true;
                 }
 
@@ -153,28 +154,32 @@
     });
 </script>
 
-<script type="text/html" data-template-name="mui_template">
-  <div class="form-row">
-      <label for="node-input-format">Template type</label>
-      <select style="width:76%" id="node-input-templateScope">
-          <option value="local">Widget in group</option>
-          <option value="global">Added to site &lt;head&gt; section</option>
-      </select>
-  </div>
+<script type="text/html" data-template-name="ui_template">
+    <div class="form-row">
+        <label for="node-input-format"><span data-i18n="ui_template.label.type"></span></label>
+        <select style="width:76%" id="node-input-templateScope">
+            <option value="local" data-i18n="ui_template.label.local"></option>
+            <option value="global" data-i18n="ui_template.label.global"></option>
+        </select>
+    </div>
 	<div class="form-row" id="template-row-group">
-        <label for="node-input-group"><i class="fa fa-table"></i> Group</label>
+        <label for="node-input-group"><i class="fa fa-table"></i> <span data-i18n="ui_template.label.group"></span></label>
         <input type="text" id="node-input-group">
     </div>
     <div class="form-row" id="template-row-size">
-        <label><i class="fa fa-object-group"></i> Size</label>
+        <label><i class="fa fa-object-group"></i> <span data-i18n="ui_template.label.size"></span></label>
         <input type="hidden" id="node-input-width">
         <input type="hidden" id="node-input-height">
         <button class="editor-button" id="node-input-size"></button>
     </div>
+    <div class="form-row" id="template-row-class">
+        <label for="node-input-className"><i class="fa fa-code"></i>  <span data-i18n="ui_template.label.className"></label>
+        <input type="text" id="node-input-className" data-i18n="[placeholder]ui_template.label.classNamePlaceholder"/>
+    </div>
     <div class="form-row">
-        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
-                <div style="display:inline-block; width:calc(100% - 105px)">
-            <input type="text" id="node-input-name">
+        <label for="node-input-name"><i class="fa fa-tag"></i> <span data-i18n="node-red:common.label.name"></span></label>
+        <div style="display:inline-block; width:calc(100% - 105px)">
+            <input type="text" id="node-input-name" data-i18n="[placeholder]node-red:common.label.name">
         </div>
     </div>
     <div class="form-row" style="margin-bottom:0px;">
@@ -194,54 +199,9 @@
             <input type="checkbox" id="node-input-storeOutMessages" style="display:inline-block; margin-left:8px; width:auto; vertical-align:top;">
             <label for="node-input-storeOutMessages" style="width:70%;"> <span data-i18n="ui_template.label.store-state"></span></label>
         </div>
+        <div class="form-row" style="margin-bottom:0px;">
+            <input type="checkbox" id="node-input-resendOnRefresh" style="display:inline-block; margin-left:8px; width:auto; vertical-align:top;">
+            <label for="node-input-resendOnRefresh" style="width:70%;"> <span data-i18n="ui_template.label.resend"></span></label>
+        </div>
     </div>
-</script>
-
-<script type="text/html" data-help-name="mui_template">
-    <p>The template widget can contain any valid html and Angular/Angular-Material directives.</p>
-    <p>This node can be used to create a dynamic user interface element that changes its appearence
-    based on the input message and can send back messages to Node-RED.</p>
-    <p><b>For example:</b><br>
-    <pre style="font-size:smaller;">&lt;div layout=&quot;row&quot; layout-align=&quot;space-between&quot;&gt;
-  &lt;p&gt;The number is&lt;/p&gt;
-  &lt;font color=&quot;{{((msg.payload || 0) % 2 === 0) ? 'green' : 'red'}}&quot;&gt;
-    {{(msg.payload || 0) % 2 === 0 ? 'even' : 'odd'}}
-  &lt;/font&gt;
-&lt;/div&gt;</pre>
-    Will display if the number received as <code>msg.payload</code> is even or odd. It will also
-    change the color of the text to green if the number is even or red if odd.<br/>
-    The next example shows how to set a unique id for your template, pick up the default theme colour,
-    and watch for any incoming message.</p>
-    <pre style="font-size:smaller;">
-&lt;div id="{{'my_'+$id}}" style="{{'color:'+theme.base_color}}"&gt;Some text&lt;/div&gt;
-&lt;script&gt;
-(function(scope) {
-  scope.$watch('msg', function(msg) {
-    if (msg) {
-      // Do something when msg arrives
-      $("#my_"+scope.$id).html(msg.payload);
-    }
-  });
-})(scope);
-&lt;/script&gt;</pre>
-    <p>Templates made in this way can be copied and remain independent of each other.</p>
-    <p><b>Sending a message:</b><br>
-    <pre style="font-size:smaller;">
-&lt;script&gt;
-var value = "hello world";
-// or overwrite value in your callback function ...
-this.scope.action = function() { return value; }
-&lt;/script&gt;
-&lt;md-button ng-click=&quot;send({payload:action()})&quot;&gt;
-    Click me to send a hello world
-&lt;/md-button&gt;</pre>
-    Will display a button that when clicked will send a message with the payload <code>'Hello world'</code>.</p>
-    <p><b>Using <code>msg.template</code>:</b><br>
-    You can also define the template content via <code>msg.template</code>, so you can use external files for example.<br>
-    Template will be reloaded on input if it has changed.<br>
-    Code written in the Template field will be ignored when <code>msg.template</code> is present.</p>
-    <p>The following icon fonts are available: <a href="https://klarsys.github.io/angular-material-icons/" target="_blank">Material Design icon</a>
-    <i>(e.g. 'check', 'close')</i> or a <a href="https://fontawesome.com/v4.7.0/icons/" target="_blank">Font Awesome icon</a>
-    <i>(e.g. 'fa-fire')</i>, or a <a href="https://github.com/Paul-Reed/weather-icons-lite/blob/master/css_mappings.md">Weather icon</a>.
-    You can use the full set of google material icons if you add 'mi-' to the icon name. e.g. 'mi-videogame_asset'.</p>
 </script>

@@ -10,19 +10,24 @@ module.exports = function(RED) {
         var tab = RED.nodes.getNode(group.config.tab);
         if (!tab) { return; }
 
+        node.on("input", function(msg) {
+            node.topi = msg.topic;
+        });
+
         var done = ui.add({
             node: node,
             tab: tab,
             group: group,
             forwardInputMessages: config.passthru,
-            storeFrontEndInputAsState: false,
+            emitOnlyNewValues: false,
             control: {
                 type: 'date-picker',
                 label: config.label,
                 order: config.order,
-                ddd : new Date(),
+                ddd : new Date().setUTCHours(0,0,0,0),
                 width: config.width || group.config.width || 6,
-                height: config.height || 1
+                height: config.height || 1,
+                className: config.className || '',
             },
             convert: function (p,o,m) {
                 var d = new Date(m.payload);
@@ -39,10 +44,11 @@ module.exports = function(RED) {
                 return d;
             },
             beforeSend: function (msg) {
-                msg.topic = config.topic || msg.topic;
+                var t = RED.util.evaluateNodeProperty(config.topic,config.topicType || "str",node,msg) || node.topi;
+                if (t) { msg.topic = t; }
             }
         });
         node.on("close", done);
     }
-    RED.nodes.registerType("mui_date_picker", DatePickerNode);
+    RED.nodes.registerType("ui_date_picker", DatePickerNode);
 };

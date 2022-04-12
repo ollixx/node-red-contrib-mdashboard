@@ -100,6 +100,7 @@ function css() {
         .pipe(concatCss('app.min.css',{rebaseUrls:false}))
         .pipe(header(fs.readFileSync('license.js')))
         .pipe(eol('\n'))
+        //.pipe(minifyCss())
         .pipe(gulp.dest('dist/css/'));
 }
 
@@ -134,13 +135,13 @@ function fonts() {
 }
 
 function gridstack() {
-    gulp.src('node_modules/gridstack/dist/gridstack.min.css').pipe(gulp.dest('dist/css/'));
-    gulp.src('node_modules/gridstack/dist/gridstack.jQueryUI.min.js').pipe(gulp.dest('dist/js/'));
-    gulp.src('node_modules/gridstack/dist/gridstack.min.js').pipe(gulp.dest('dist/js/'));
-    gulp.src('node_modules/gridstack/dist/gridstack.min.map').pipe(gulp.dest('dist/js/'));
-    gulp.src('node_modules/lodash/lodash.min.js').pipe(gulp.dest('dist/js/'));
-    return gulp.src('node_modules/gridstack/src/gridstack-extra.scss')
-        .pipe(replace('$gridstack-columns: 12 !default;','$gridstack-columns: 30;'))
+    //gulp.src('node_modules/gridstack/dist/gridstack.min.css').pipe(gulp.dest('dist/css/'));
+    //gulp.src('node_modules/gridstack/dist/gridstack.jQueryUI.min.js').pipe(gulp.dest('dist/js/'));
+    //gulp.src('node_modules/gridstack/dist/gridstack.min.js').pipe(gulp.dest('dist/js/'));
+    //gulp.src('node_modules/gridstack/dist/gridstack.min.map').pipe(gulp.dest('dist/js/'));
+    //gulp.src('node_modules/lodash/lodash.min.js').pipe(gulp.dest('dist/js/'));
+    return gulp.src('src/gridstack-extra.scss')
+        .pipe(replace('$gridstack-columns: 11 !default;','$gridstack-columns: 30;'))
         .pipe(sass({outputStyle: 'compressed'}))
         .pipe(rename({extname: '.min.css'}))
         .pipe(gulp.dest('dist/css'))
@@ -156,7 +157,10 @@ function manifest() {
             // exclude: 'dashboard.appcache'
             exclude: ['dashboard.appcache','index.html']
         }))
+        // Manually add socketio
         .pipe(replace('tinycolor-min.js', 'tinycolor-min.js\nsocket.io/socket.io.js'))
+        // Manually add gridstack items add loading.html (in case it exists)
+        .pipe(replace('fonts/weather-icons-lite.woff2', 'fonts/weather-icons-lite.woff2\ngs/gridstack.jQueryUI.min.js\ngs/gridstack.min.css\ngs/gridstack.min.js\nloading.html'))
         .pipe(eol('\n'))
         .pipe(gulp.dest('dist/'));
 }

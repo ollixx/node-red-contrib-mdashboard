@@ -1,5 +1,5 @@
 <script type="text/javascript">
-    RED.nodes.registerType('mui_link',{
+    RED.nodes.registerType('ui_link',{
         category: 'config',
         color: 'rgb( 63, 173, 181)',
         defaults: {
@@ -7,7 +7,8 @@
             link: {value: 'https://www.google.com'},
             icon: {value: 'open_in_browser'},
             target: {value: 'newtab', validate :function() { return true; }},
-            order: {value: 0}
+            order: {value: 0},
+            className: {value: ''}
         },
         inputs:0,
         outputs:0,
@@ -34,10 +35,14 @@
     });
 </script>
 
-<script type="text/html" data-template-name="mui_link">
+<script type="text/html" data-template-name="ui_link">
     <div class="form-row">
         <label for="node-config-input-name"><i class="fa fa-tag"></i> <span data-i18n="ui_link.label.name"></span></label>
         <input type="text" id="node-config-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-className"><i class="fa fa-code"></i>  <span data-i18n="ui_link.label.className"></label>
+        <input type="text" id="node-input-className" data-i18n="[placeholder]ui_link.label.classNamePlaceholder"/>
     </div>
     <div class="form-row">
         <label for="node-config-input-link"><i class="fa fa-link"></i> <span data-i18n="ui_link.label.link"></span></label>
@@ -57,12 +62,4 @@
         <label for="node-config-input-target-openiframe" data-i18n="ui_link.label.iframe"></label>
     </div>
     <div class="form-tips" data-i18n="[html]ui_link.tip"></div>
-</script>
-
-<script type="text/html" data-help-name="mui_link">
-    <p>The <b>Icon</b> can be defined, as either a <a href="https://klarsys.github.io/angular-material-icons/" target="_blank">Material Design icon</a>
-    <i>(e.g. 'check', 'close')</i> or a <a href="https://fontawesome.com/v4.7.0/icons/" target="_blank">Font Awesome icon</a>
-    <i>(e.g. 'fa-fire')</i>, or a <a href="https://github.com/Paul-Reed/weather-icons-lite/blob/master/css_mappings.md">Weather icon</a>.
-    You can use the full set of google material icons if you add 'mi-' to the icon name. e.g. 'mi-videogame_asset'.</p>
-    <p>The <b>Open in</b> field controls whether the link opens in a <i>New Tab</i>, or if the link is opened within an <i>iframe</i> on the same page. Some sites, including Google, do not allow the rendering of their page inside an iframe. If you select the <i>iframe</i> option and the site does not show, this is simply because that site forbids the use of it inside an iframe.</p>
 </script>

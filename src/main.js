@@ -50,7 +50,9 @@ app.config(['$mdThemingProvider', '$compileProvider', '$mdDateLocaleProvider', '
         $mdThemingProvider.generateThemesOnDemand(true);
         $provide.value('themeProvider', $mdThemingProvider);
 
-        //white-list all protocols
+        //white-list all protocols and turn off debug
+        $compileProvider.debugInfoEnabled(false);
+        $compileProvider.commentDirectivesEnabled(false);
         $compileProvider.aHrefSanitizationWhitelist(/.*/);
 
         //set the locale provider
@@ -71,6 +73,8 @@ app.config(['$mdThemingProvider', '$compileProvider', '$mdDateLocaleProvider', '
         $mdDateLocaleProvider.monthHeaderFormatter = function(date) {
             return moment(date).format("MMM YYYY");
         };
+
+        $mdDateLocaleProvider.firstDayOfWeek = moment.localeData()._week.dow;
     }
 ]);
 
@@ -83,8 +87,8 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
         this.selectedTab = null;
         this.loaded = false;
         this.hideToolbar = false;
-        this.allowSwipe = false;
-        this.lockMenu = false;
+        this.allowSwipe = "false";
+        this.lockMenu = "false";
         this.allowTempTheme = true;
         var main = this;
         var audioContext;
@@ -109,8 +113,30 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
             }
         }
 
-        $scope.onSwipeLeft = function() { if (main.allowSwipe) { moveTab(-1); } }
-        $scope.onSwipeRight = function() { if (main.allowSwipe) { moveTab(1); } }
+        $scope.onSwipeLeft = function() {
+            if (main.allowSwipe === "menu") { $mdSidenav('left').close(); }
+            else if (main.allowSwipe === "true" || main.allowSwipe === "mouse") { moveTab(-1); }
+        }
+        $scope.onSwipeRight = function() {
+            if (main.allowSwipe === "menu") { $mdSidenav('left').open(); }
+            else if (main.allowSwipe === "true" || main.allowSwipe === "mouse") { moveTab(1); }
+        }
+
+        // Added as PR#587 to fix navigation history so back/forwards works ok from browser
+        $scope.$on('$locationChangeSuccess', function ($event, newUrl, oldUrl, newState, oldState) {
+            if ($location.path() === '/' + tabId) { return; }
+            var tabIdFromUrlPath = parseInt($location.path().split('/')[1], 10);
+            if (!isNaN(tabIdFromUrlPath)) {
+                var menu = main.menu[tabIdFromUrlPath];
+                if (menu) {
+                    main.open(menu, tabIdFromUrlPath);
+                }
+            }
+        });
+
+        $rootScope.$on("collapse", function(e,d,d2) {
+            events.emit('ui-collapse', {group:d, state:d2});
+        });
 
         this.toggleSidenav = function () { $mdSidenav('left').toggle(); }
 
@@ -140,10 +166,7 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
                     if (typeof main.menu[index].link === "string") {
                         main.menu[index].link = $sce.trustAsResourceUrl(main.menu[index].link);
                     }
-                    main.selectedTab = main.menu[index];
-                    tabId = index;
-                    events.emit('ui-change', tabId);
-                    $location.path(index);
+                    main.select(index);
                 }
                 $mdSidenav('left').close();
             }
@@ -163,28 +186,42 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
             // in camel case. e.g. 'page-backgroundColor' -> '@pageBackgroundColor'
             var configurableStyles = Object.keys(theme.themeState);
             var lessObj = {};
-
-            for (var i=0; i<configurableStyles.length; i++) {
-                //remove dash and camel case
-                var style = configurableStyles[i];
-                if (style.startsWith('m-')) {
-                    style = style.substring(2);
+            if (main.allowAngularTheme !== true) {
+                for (var i=0; i<configurableStyles.length; i++) {
+                    //remove dash and camel case
+                    var arr = configurableStyles[i].split('-');
+                    for (var j=1; j<arr.length; j++) {
+                        arr[j] = arr[j].charAt(0).toUpperCase() + arr[j].slice(1);
+                    }
+                    var lessVariable = arr.join("");
+                    var colour = theme.themeState[configurableStyles[i]].value;
+                    lessObj["@"+lessVariable] = colour;
                 }
-                var arr = style.split('-');
-                for (var j=1; j<arr.length; j++) {
-                    arr[j] = arr[j].charAt(0).toUpperCase() + arr[j].slice(1);
-                }
-                var lessVariable = arr.join("");
-                var themeState = theme.themeState[configurableStyles[i]]; //getting weird orphaned widget-color- temp fix need to see why this is happening
-                if (themeState) {
-                    lessObj["@"+lessVariable] = themeState.value;
-                }
+            }
+            else {
+                lessObj["@pageBackgroundColor"] = angularColorToHex(main.angularColors.background.name);
+                lessObj["@pageTitlebarBackgroundColor"] = angularColorToHex(main.angularColors.primary.name);
+                lessObj["@pageSidebarBackgroundColor"] = angularColorToHex(main.angularColors.background.name);
+                lessObj["@groupTextColor"] = (main.isDark === true ? "#FFFFFF" : "#000000");
+                lessObj["@groupBackgroundColor"] = angularColorToHex(main.angularColors.background.name);
+                lessObj["@groupBorderColor"] = angularColorToHex(main.angularColors.accent.name);
+                lessObj["@widgetTextColor"] = (main.isDark === true ? "#FFFFFF" : "#000000");
+                lessObj["@widgetBackgroundColor"] = angularColorToHex(main.angularColors.primary.name);
+                lessObj["@widgetBorderColor"] = angularColorToHex(main.angularColors.background.name);
             }
             if (typeof main.allowTempTheme === 'undefined') { main.allowTempTheme = true; }
             lessObj["@nrTemplateTheme"] = main.allowTempTheme;
             lessObj["@nrTheme"] = !main.allowAngularTheme;
             lessObj["@nrUnitHeight"] = (main.sizes.sy / 2)+"px";
             less.modifyVars(lessObj);
+        }
+
+        function angularColorToHex(color) {
+            var angColorValues = { red: "#F44336", pink: "#E91E63", purple: "#9C27B0", deeppurple: "#673AB7",
+                indigo: "#3F51B5", blue: "#2196F3", lightblue: "#03A9F4", cyan: "#00BCD4", teal: "#009688",
+                green: "#4CAF50", lightgreen: "#8BC34A", lime: "#CDDC39", yellow: "#FFEB3B", amber: "#FFC107",
+                orange: "#FF9800", deeporange: "#FF5722", brown: "#795548", grey: "#9E9E9E", bluegrey: "#607D8B"};
+            return angColorValues[color.replace("-","").toLowerCase()];
         }
 
         function processGlobals() {
@@ -341,8 +378,8 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
             if (ui.site) {
                 name = main.name = ui.site.name;
                 main.hideToolbar = (ui.site.hideToolbar == "true");
-                main.allowSwipe = (ui.site.allowSwipe == "true");
-                main.lockMenu = (ui.site.lockMenu == "true");
+                main.allowSwipe = ui.site.allowSwipe;
+                main.lockMenu = ui.site.lockMenu;
                 if (typeof ui.site.allowTempTheme === 'undefined') { main.allowTempTheme = true; }
                 else {
                     main.allowTempTheme = (ui.site.allowTempTheme == "true");
@@ -360,8 +397,12 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
                     .accentPalette(ui.theme.angularTheme.accents || 'blue')
                     .warnPalette(ui.theme.angularTheme.warn || 'red')
                     .backgroundPalette(ui.theme.angularTheme.background || 'grey');
-                if (ui.theme.angularTheme.palette === "dark") { themeProvider.theme('default').dark(); }
+                if (ui.theme.angularTheme.palette === "dark") {
+                    themeProvider.theme('default').dark();
+                    main.isDark = true;
+                }
                 $mdTheming.generateTheme('default');
+                main.angularColors = themeProvider._THEMES.default.colors;
             }
             $document[0].theme = ui.theme;
             if (ui.title) { name = ui.title }
@@ -377,14 +418,19 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
             }
             var finishLoading = function() {
                 if (main.selectedTab && typeof(main.selectedTab.theme) === 'object') {
-                    main.selectedTab.theme.themeState["m-widget-borderColor"] = main.selectedTab.theme.themeState["m-widget-borderColor"] || main.selectedTab.theme.themeState["m-group-backgroundColor"];
+                    main.selectedTab.theme.themeState["widget-borderColor"] = main.selectedTab.theme.themeState["widget-borderColor"] || main.selectedTab.theme.themeState["group-backgroundColor"];
                     applyStyle(main.selectedTab.theme);
                 }
-                else if (typeof(ui.theme) === 'object' && ui.theme.themeState['m-base-color'].value) {
+                else if (typeof(ui.theme) === 'object' && ui.theme.themeState['base-color'].value) {
                     applyStyle(ui.theme);
                 }
                 if ((main.selectedTab !== null) && (main.selectedTab.link !== undefined)) {
                     main.selectedTab.link = $sce.trustAsResourceUrl(main.selectedTab.link);
+                }
+                if (ui.hasOwnProperty("theme")) {
+                    $('meta[name=theme-color]').attr('content', ui.theme.themeState["page-titlebar-backgroundColor"].value || "#097479");
+                } else {
+                    $('meta[name=theme-color]').attr('content','#097479');
                 }
                 $mdToast.hide();
                 processGlobals();
@@ -498,6 +544,9 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
                 if (found.hasOwnProperty("me") && found.me.hasOwnProperty("processInput")) {
                     found.me.processInput(msg);
                 }
+                else if (found.hasOwnProperty("isOptionsValid") && found.hasOwnProperty("newOptions")) {
+                    found.options = found.newOptions;
+                }
             }
             $scope.$apply();
         });
@@ -510,6 +559,36 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
                     hideDelay: 6000000
                 });
                 disc = true;
+            }
+        });
+
+        // Added as PR #586 - to help cache bust aged out socket connections and force re-authentication
+        events.on('connect_error', function (error) {
+            var getRandomFromUrl = function () {
+                var matches = window.location.search.match(/[?&]random=([^&]*)/);
+                return (matches && matches[1] || 0) * 1;
+            };
+            var forceReload = function () {
+                // avoid reload loop
+                if ((new Date()).getTime() - getRandomFromUrl() < 60000) { return; }
+
+                // remove existing 'random' and add new one
+                var search = window.location.search;
+                search = search.replace(/[?&]random=([^&]*)/, '');
+                if (!search.startsWith('?')) { search = '?' + search; }
+                search += '&random=' + (new Date()).getTime();
+
+                // restore new url with updated search params
+                var url = window.location.origin;
+                url += window.location.pathname;
+                url += search;
+                url += window.location.hash;
+                window.location = url;
+            };
+
+            // force reload on Unauthorized response
+            if (error.type === 'TransportError' && error.description === 401) {
+                forceReload();
             }
         });
 
@@ -563,11 +642,9 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
                 '</md-dialog>';
                 $mdDialog.show(confirm, { panelClass:'nr-dashboard-dialog' }).then(
                     function(res) {
-                        console.log("RES",typeof res,res,"::",msg.ok,"::");
                         msg.msg.payload = msg.ok;
-                        if (res != true) { msg.msg.payload = res; }
+                        if (res !== true) { msg.msg.payload = res; }
                         if (res == undefined) { msg.msg.payload = ""; }
-                        console.log("MSG",msg);
                         events.emit({ id:msg.id, value:msg });
                     },
                     function() {
@@ -585,7 +662,8 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
                         scope: toastScope,
                         templateUrl: 'partials/toast.html',
                         hideDelay: msg.displayTime,
-                        position: msg.position
+                        position: msg.position,
+                        toastClass: msg.toastClass
                     };
                     $mdToast.show(opts);
                 }
@@ -686,6 +764,20 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
                                             localStorage.setItem("g"+c,true);
                                         }
                                     }
+                                    if (msg.group.hasOwnProperty("close")) {
+                                        if (msg.group.close.indexOf(c) > -1) {
+                                            if (typeof localStorage !== 'undefined' && localStorage.getItem(c) == "false") {
+                                                $("#"+c+" > div > p > span > i").trigger("click");
+                                            }
+                                        }
+                                    }
+                                    if (msg.group.hasOwnProperty("open")) {
+                                        if (msg.group.open.indexOf(c) > -1) {
+                                            if (typeof localStorage !== 'undefined' && localStorage.getItem(c) == "true") {
+                                                $("#"+c+" > div > p > span > i").trigger("click");
+                                            }
+                                        }
+                                    }
                                     $(window).trigger('resize');
                                 }
                             }
@@ -731,12 +823,15 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
                     words.onerror = function(err) { events.emit('ui-audio', 'error: '+err.error); }
                     words.onend = function() { events.emit('ui-audio', 'complete'); }
                     for (var v=0; v<voices.length; v++) {
-                        if (voices[v].lang === msg.voice) {
+                        if (voices[v].voiceURI === msg.voice) {
                             words.voice = voices[v];
                             break;
                         }
                     }
                     events.emit('ui-audio', 'playing');
+                    if ((msg.vol !== undefined) && !isNaN(parseInt(msg.vol))) {
+                        words.volume = parseInt(msg.vol)/100 || 1;
+                    }
                     window.speechSynthesis.speak(words);
                 }
                 else {
@@ -757,11 +852,20 @@ app.controller('MainController', ['$mdSidenav', '$window', 'UiEvents', '$locatio
                         events.emit('ui-audio', 'complete');
                     }
                     var buffer = new Uint8Array(msg.audio);
+
                     audioContext.decodeAudioData(
                         buffer.buffer,
                         function(buffer) {
                             audioSource.buffer = buffer;
-                            audioSource.connect(audioContext.destination);
+                            if (msg.vol) {
+                                var volume = audioContext.createGain();
+                                volume.gain.value = msg.vol/100;
+                                volume.connect(audioContext.destination);
+                                audioSource.connect(volume);
+                            }
+                            else {
+                                audioSource.connect(audioContext.destination);
+                            }
                             audioSource.start(0);
                             events.emit('ui-audio', 'playing');
                         },

@@ -31,16 +31,20 @@ module.exports = function(RED) {
                 width: config.width || group.config.width || 6,
                 height: config.height || 1,
                 layout: angLayout,
-                layoutAlign: angLayoutAlign
+                layoutAlign: angLayoutAlign,
+                className: config.className || '',
             },
-            convert: function(value) {
-                if (value !== undefined) {
+            convert: function(value,oldValue,msg) {
+                if (value !== undefined && value !== null) {
                     if (Buffer.isBuffer(value)) {
                         value = value.toString('binary');
                     }
                     else {
                         value = value.toString();
                     }
+                }
+                else {
+                    msg.payload = oldValue;
                 }
                 return value;
             }

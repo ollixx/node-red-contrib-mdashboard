@@ -13,6 +13,10 @@ module.exports = function(RED) {
         var tab = RED.nodes.getNode(group.config.tab);
         if (!tab) { return; }
 
+        node.on("input", function(msg) {
+            node.topi = msg.topic;
+        });
+
         var done = ui.add({
             node: node,
             tab: tab,
@@ -31,10 +35,12 @@ module.exports = function(RED) {
                 step: Math.abs(config.step) || 1,
                 outs: config.outs || "all",
                 width: config.width || group.config.width || 6,
-                height: config.height || 1
+                height: config.height || 1,
+                className: config.className || '',
             },
             beforeSend: function (msg) {
-                msg.topic = config.topic || msg.topic;
+                var t = RED.util.evaluateNodeProperty(config.topic,config.topicType || "str",node,msg) || node.topi;
+                if (t) { msg.topic = t; }
                 if (node.pt) {
                     node.status({shape:"dot",fill:"grey",text:msg.payload});
                 }
@@ -49,6 +55,11 @@ module.exports = function(RED) {
             node.on("input", function(msg) {
                 node.state[0] = msg.payload;
                 node.status({shape:"dot",fill:"grey",text:node.state[0] + " | " + node.state[1]});
+            });
+        }
+        else if (node._wireCount === 0) {
+            node.on("input", function(msg) {
+                node.status({shape:"dot",fill:"grey",text:msg.payload});
             });
         }
         node.on("close", done);

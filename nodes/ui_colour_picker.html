@@ -1,11 +1,11 @@
 <script type="text/javascript">
-    RED.nodes.registerType('mui_colour_picker',{
-        category: 'mdashboard',
-        color: 'rgb(204, 219, 234)',
+    RED.nodes.registerType('ui_colour_picker',{
+        category: RED._("node-red-dashboard/ui_base:ui_base.label.category"),
+        color: 'rgb(176, 223, 227)',
         defaults: {
             name: {value: ''},
             label: {value: ''},
-            group: {type: 'mui_group', required: true},
+            group: {type: 'ui_group', required: true},
             format: {value: 'hex'},
             outformat: {value: 'string'},
             showSwatch: {value: true},
@@ -28,7 +28,9 @@
             },
             height: {value: 0},
             passthru: {value: true},
-            topic: {value: ''}
+            topic: {value: 'topic', validate: (RED.validators.hasOwnProperty('typedInput')?RED.validators.typedInput('topicType'):function(v) { return true})},
+            topicType: {value: 'msg'},
+            className: {value: ''}
         },
         inputs:1,
         outputs:1,
@@ -42,6 +44,16 @@
                 this.square = "false";
                 $("#node-input-square").val("false");
             }
+            $("#node-input-square").on("change", function() {
+                if ($("#node-input-square").val() === "false") {
+                    $("#node-input-showLightness").prop('checked', true);
+                    $("#node-input-showHue").prop('checked', false);
+                }
+                else {
+                    $("#node-input-showLightness").prop('checked', false);
+                    $("#node-input-showHue").prop('checked', true);
+                }
+            });
             $("#node-input-size").elementSizer({
                 width: "#node-input-width",
                 height: "#node-input-height",
@@ -55,6 +67,11 @@
                     $("#node-alpha-control").show();
                 }
             });
+            $('#node-input-topic').typedInput({
+                default: 'str',
+                typeField: $("#node-input-topicType"),
+                types: ['str','msg','flow','global']
+            });
         },
         oneditsave: function() {
             if (!$("#node-input-showPicker").is(':checked') && !$("#node-input-showValue").is(':checked')) {
@@ -65,7 +82,7 @@
     });
 </script>
 
-<script type="text/html" data-template-name="mui_colour_picker">
+<script type="text/html" data-template-name="ui_colour_picker">
     <div class="form-row">
         <label for="node-input-group"><i class="fa fa-table"></i> Group</label>
         <input type="text" id="node-input-group">
@@ -133,19 +150,14 @@
     <div class="form-row">
         <label for="node-input-topic" style="padding-left: 25px; margin-right: -25px">Topic</label>
         <input type="text" id="node-input-topic" placeholder="optional topic">
+        <input type="hidden" id="node-input-topicType">
+    </div>
+    <div class="form-row">
+        <label for="node-input-className"><i class="fa fa-code"></i>  Class</label>
+        <input type="text" id="node-input-className" placeholder="Optional CSS class name(s) for widget"/>
     </div>
     <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
         <input type="text" id="node-input-name">
     </div>
-</script>
-
-<script type="text/html" data-help-name="mui_colour_picker">
-    <p>Adds a colour picker to the dashboard.</p>
-    <p>If the group width is 4 or greater then the picker can be set to be visible at all times.</p>
-    <p><b>Format</b> can be rgb, hex, hex8, hsv, or hsl. Transparency is supported for all except hex.</p>
-    <p>If a <b>Topic</b> is specified, it will be added as <code>msg.topic</code>.</p>
-    <p>Setting <code>msg.enabled</code> to <code>false</code> will disable the input.</p>
-    <p>If set to ‘pass through mode’ a message arriving on the input will be evaluated for any colour format available
-        as Format. If the conversion fails #000000 will be used.</p>
 </script>

@@ -28,6 +28,10 @@ angular.module('ui').controller('uiComponentController', ['$scope', 'UiEvents', 
                 me.item.getColor = $interpolate(me.item.color).bind(null, me.item);
             }
 
+            if (typeof me.item.icon === "string") {
+                me.item.getIcon = $interpolate(me.item.icon).bind(null, me.item);
+            }
+
             if (typeof me.item.units === "string") {
                 me.item.getUnits = $interpolate(me.item.units).bind(null, me.item);
             }
@@ -35,8 +39,22 @@ angular.module('ui').controller('uiComponentController', ['$scope', 'UiEvents', 
             me.init = function () {
                 switch (me.item.type) {
                     case 'button': {
-                        me.buttonClick = function () {
-                            me.valueChanged(0);
+                        me.buttonClick = function (e) {
+                            throttle({
+                                id:me.item.id,
+                                value:me.item.value,
+                                event: {
+                                    clientX:e.originalEvent.clientX,
+                                    clientY:e.originalEvent.clientY,
+                                    bbox:[
+                                        e.originalEvent.clientX - e.originalEvent.layerX,
+                                        e.originalEvent.clientY - e.originalEvent.layerY + e.currentTarget.clientHeight,
+                                        e.originalEvent.clientX - e.originalEvent.layerX + e.currentTarget.clientWidth,
+                                        e.originalEvent.clientY - e.originalEvent.layerY
+                                    ]
+                                }
+                            },0);
+                            //me.valueChanged(0);
                         };
                         break;
                     }
@@ -49,9 +67,30 @@ angular.module('ui').controller('uiComponentController', ['$scope', 'UiEvents', 
                     }
 
                     case 'dropdown': {
+                        me.searchTerm = '';
+                        me.selectAll = false;
+                        me.changed = false;
                         me.itemChanged = function () {
-                            me.valueChanged(0);
+                            me.searchTerm = '';
+                            if (!me.item.multiple) {
+                                me.valueChanged(0);
+                            } else {
+                                me.changed = true;
+                            }
                         };
+
+                        me.checkAll = function () {
+                            var srch = me.item.options.filter(function(o) { return o.label.toLowerCase().includes(me.searchTerm.toLowerCase())} );
+                            me.item.value = me.selectAll ? srch.map(function(o) {return o.value}) : []
+                            me.valueChanged(0);
+                        }
+
+                        me.closed = function() {
+                            if (me.changed) {
+                                me.changed = false;
+                                me.valueChanged(0);
+                            }
+                        }
 
                         // PL dropdown
                         // processInput will be called from main.js
@@ -184,7 +223,7 @@ angular.module('ui').controller('uiComponentController', ['$scope', 'UiEvents', 
 
                     case 'text-input':
                     case 'text-input-CR': {
-                        if (me.item.mode == "time") {
+                        if (me.item.mode.indexOf("time") != -1) {
                             me.processInput = function (msg) {
                                 var dtmval = new Date(msg.value);
                                 // initial check for millisecond timestamp
@@ -230,7 +269,7 @@ angular.module('ui').controller('uiComponentController', ['$scope', 'UiEvents', 
 
                     case 'date-picker': {
                         if (me.item.ddd !== undefined) {
-                            if (typeof me.item.ddd === "string") {
+                            if ((typeof me.item.ddd === "number")||(typeof me.item.ddd === "string")) {
                                 me.item.ddd = new Date(me.item.ddd);
                             }
                         }
@@ -245,13 +284,17 @@ angular.module('ui').controller('uiComponentController', ['$scope', 'UiEvents', 
                         me.item.me = me;
                         break;
                     }
-
                     case 'form': {
                         me.processInput = function(msg) {
-                            if (typeof(msg.value) != 'object') { return }
+                            if (typeof(msg.value) != 'object') { return; }
                             for ( var key in msg.value ) {
                                 if (!me.item.formValue.hasOwnProperty(key)) { continue; }
-                                me.item.formValue[key] = msg.value[key]
+                                for (var x in me.item.options) {
+                                    if ((me.item.options[x].type === "date" || me.item.options[x].type === "time") && me.item.options[x].value === key) {
+                                        msg.value[key] = new Date(msg.value[key]);
+                                    }
+                                    me.item.formValue[key] = msg.value[key];
+                                }
                             }
                         }
                         me.item.extraRows = 0;
@@ -260,6 +303,10 @@ angular.module('ui').controller('uiComponentController', ['$scope', 'UiEvents', 
                                 me.item.extraRows += item.rows - 1;
                             }
                         })
+                        me.item.rowCount = me.item.splitLayout == true ? Math.ceil(me.item.options.length/2) : me.item.options.length;
+                        me.item.rowCount += me.item.label == '' ? 1 : 2
+                        me.item.rowCount += me.item.extraRows;
+                        me.item.rowHeight = (((me.item.rowCount -1) * me.item.sy) + (me.item.label == '' ? me.item.sy * 0.3 : 1.2 * me.item.sy) + ((me.item.rowCount - 1) * me.item.cy))/me.item.rowCount;
                         me.stop = function(event) {
                             if ((event.charCode === 13) || (event.which === 13)) {
                                 event.preventDefault();
@@ -272,12 +319,12 @@ angular.module('ui').controller('uiComponentController', ['$scope', 'UiEvents', 
                             me.reset();
                         };
                         me.reset = function () {
-                            for (var x in me.item.formValue) {
-                                if (typeof (me.item.formValue[x]) === "boolean") {
-                                    me.item.formValue[x] = false;
+                            for (var x in me.item.options) {
+                                if (me.item.options[x].type === "checkbox" || me.item.options[x].type === "switch") {
+                                    me.item.formValue[me.item.options[x].value] = false;
                                 }
                                 else {
-                                    me.item.formValue[x] = "";
+                                    me.item.formValue[me.item.options[x].value] = "";
                                 }
                             }
                             $scope.$$childTail.form.$setUntouched();
@@ -300,10 +347,24 @@ angular.module('ui').controller('uiComponentController', ['$scope', 'UiEvents', 
                     }
 
                     case 'slider': {
+                        me.wheel = function (e) {
+                            e.preventDefault();
+                            if (e.originalEvent.deltaY > 0) {
+                                me.item.value += me.item.step;
+                                if (me.item.value > me.item.max) { me.item.value = me.item.max; }
+                            }
+                            if (e.originalEvent.deltaY < 0) {
+                                me.item.value -= me.item.step;
+                                if (me.item.value < me.item.min) { me.item.value = me.item.min; }
+                            }
+                            me.valueChanged(0);
+                        }
                         me.active = false;
                         me.mdown = function() { me.active = true; };
+                        me.menter = function() { me.active = true; };
                         me.mleave = function() { me.active = false; };
-                        me.mchange = function() { events.emit({ id:me.item.id, value:me.item.value });}
+                        me.mchange = function() { me.active = false; me.valueChanged(0); }
+                        me.mup = function() { if (me.active) { me.active = false; me.valueChanged(0); } }
                         break;
                     }
                 }
