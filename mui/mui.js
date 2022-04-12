@@ -14,6 +14,7 @@ const muify = async function () {
         // await addAcornDevDependency(pkgJson);
         await addKeywords(pkgJson, ["dashboard", "ui", "gui"]);
         await replaceCommiters(pkgJson, ["Uma Sudhan P", "@ollixx"]);
+        await replaceNodenames(pkgJson);
         await savePackageJson(pkgJson);
 
         // await install();
@@ -71,6 +72,17 @@ const replaceCommiters = async function (pkgJson, commitersArr) {
     });
 }
 
+const replaceNodenames = async function (pkgJson) {
+    let nodes = pkgJson["node-red"].nodes;
+    for (let n in nodes) {
+        let node = nodes[n];
+        if (n.startsWith("ui_")) {
+            delete nodes[n];
+            nodes["m" + n] = node;
+        }
+    };
+}
+
 const install = async function () {
     const { exec } = require("child_process");
     const child = exec("npm install");
@@ -83,7 +95,14 @@ const install = async function () {
 
 const activateMultiUserDashboard = async function () {
     let uiJs = fs.readFileSync(__dirname + '/../ui.js', 'utf8');
+
+    // uncomment usage of socketid
     uiJs = uiJs.replace("//toEmit.socketid = msg.socketid;", "toEmit.socketid = msg.socketid;");
+
+    // use mui options in settings.js
+    uiJs = uiJs.replace("redSettings.ui", "redSettings.mui");
+    uiJs = uiJs.replace("settings.path = 'ui';", "settings.path = 'mui';");
+
     fs.writeFileSync(__dirname + '/../ui.js', uiJs);
 }
 
